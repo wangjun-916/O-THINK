@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>THINK英语作业打卡</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<script src="https://cdn.bootcdn.net/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+<script src="https://cdn.bootcdn.net/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+*{box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,PingFang SC,Microsoft YaHei,sans-serif}
+html,body{margin:0;padding:0;background:#f5f7fa;color:#222}
+.container{padding:12px}
+@media (orientation: portrait) {
+  .screen-portrait { display:block; }
+  .screen-landscape { display:none; }
+}
+@media (orientation: landscape) {
+  .screen-portrait { display:none; }
+  .screen-landscape { display:block; }
+}
+.page-header{background:#fff;border-radius:14px;padding:16px;margin-bottom:16px;box-shadow:0 2px 6px rgba(0,0,0,0.05)}
+.page-header h1{margin:0;font-size:18px;text-align:center;color:#165DFF}
+.section-card{background:#fff;border-radius:14px;padding:16px;margin-bottom:16px;box-shadow:0 2px 6px rgba(0,0,0,0.05)}
+.section-title{font-size:16px;font-weight:600;margin:0 0 12px 0}
+.bar-group{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;align-items:center}
+input,select,button{padding:10px 12px;border-radius:10px;font-size:14px;outline:none;border:1px solid #ddd}
+button{background:#165DFF;color:#fff;border:none;font-weight:500;min-height:42px;cursor:pointer}
+button.success{background:#09c971}
+button.danger{background:#ff4757}
+.table-wrapper{width:100%;overflow-x:auto;background:#fff;border-radius:12px}
+table{width:100%;min-width:700px;border-collapse:collapse}
+th{background:#f7f9fc;padding:12px 8px;font-weight:600;border-bottom:1px solid #eee}
+td{padding:10px 6px;border-bottom:1px solid #eee;text-align:center}
+.name-col{text-align:left;font-weight:600;color:#165DFF}
+.know-tag{padding:4px 6px;border-radius:6px;background:#f9f9f9;border:1px solid #ddd;font-size:11px;display:inline-block;margin:2px}
+.know-tag.active{background:#165DFF;color:#fff}
+.modal{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);display:none;align-items:center;justify-content:center;z-index:999}
+.modal-content{background:#fff;border-radius:16px;padding:24px;max-width:500px;width:90vw}
+.modal-close{position:absolute;top:16px;right:16px;font-size:24px;cursor:pointer}
+.tip{position:fixed;top:20px;right:20px;background:#09c971;color:#fff;padding:8px 12px;border-radius:10px;z-index:1000}
+.tag-box{display:flex;flex-wrap:wrap;gap:6px}
+.tag-current{background:#165DFF;color:#fff;padding:4px 8px;border-radius:12px;font-size:12px}
+.tag-history{background:#eee;color:#666;padding:4px 8px;border-radius:12px;font-size:12px}
+.login-wrapper{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+.login-box{background:#fff;border-radius:16px;padding:30px;width:100%;max-width:400px}
+.login-title{text-align:center;font-size:20px;margin-bottom:24px;color:#165DFF}
+.user-info{background:#eef5ff;padding:12px;border-radius:12px;display:flex;justify-content:space-between;align-items:center;margin-top:10px}
+.logout-btn{background:#ff4757;color:#fff;border:none;border-radius:8px;padding:6px 10px}
+.chart-grid{display:grid;grid-template-columns:1fr;gap:12px}
+.chart-box{background:#f9f9f9;padding:10px;border-radius:12px;min-height:250px}
+.chart-box canvas{width:100% !important;height:200px !important}
+.zoom-bar{display:flex;gap:8px;align-items:center;margin-bottom:12px}
+.main-zoom{transform-origin:top left}
+#studentImport,#fileImport{display:none}
+</style>
+</head>
+<body>
+
+<div id="loginPage" class="login-wrapper">
+  <div class="login-box">
+    <div class="login-title">🔐 THINK英语打卡系统</div>
+    <input type="text" id="loginUser" placeholder="老师账号" style="width:100%;margin-bottom:10px">
+    <input type="password" id="loginPwd" placeholder="密码" style="width:100%;margin-bottom:10px">
+    <button id="loginBtn" style="width:100%">登录</button>
+    <div style="margin-top:16px;font-size:12px;color:#666;text-align:center;">
+      账号：teacher01~10　密码：123456
+    </div>
+  </div>
+</div>
+
+<div id="mainPage" style="display:none;">
+<div class="container">
+  <div class="page-header">
+    <h1>THINK英语作业打卡反馈系统</h1>
+    <div class="user-info">
+      <span>当前老师：<span id="currentTeacherName"></span></span>
+      <button id="logoutBtn" class="logout-btn">退出登录</button>
+    </div>
+  </div>
+
+  <div class="section-card">
+    <div class="section-title">显示控制</div>
+    <div class="zoom-bar">
+      <button onclick="changeZoom(-0.5)">-缩小</button>
+      <button onclick="changeZoom(0.5)">+放大</button>
+      <span id="zoomText">100%</span>
+      <button id="toggleScreenBtn">切换横竖屏</button>
+    </div>
+  </div>
+
+  <div class="section-card">
+    <div class="section-title">数据备份</div>
+    <div class="bar-group">
+      <button id="exportBtn">导出备份</button>
+      <button id="importBtn">导入备份</button>
+      <input type="file" id="fileImport">
+    </div>
+  </div>
+
+  <div class="section-card">
+    <div class="bar-group">
+      <select id="classSelect"></select>
+      <input type="text" id="newClassName" placeholder="新班级">
+    </div>
+    <div class="bar-group">
+      <button id="addClassBtn">新建班级</button>
+      <button id="delClassBtn" class="danger">删除班级</button>
+      <button id="exportStuTemplateBtn" class="success">学员模板</button>
+      <button id="importStuBtn" class="success">批量导入</button>
+      <input type="file" id="studentImport" accept=".xlsx,.xls">
+    </div>
+    <div class="bar-group">
+      <select id="yearSelect">
+        <option>2025</option>
+        <option selected>2026</option>
+        <option>2027</option>
+      </select>
+      <select id="weekSelect"></select>
+    </div>
+    <div class="bar-group">
+      <button id="addStudentBtn">+ 添加学生</button>
+      <button id="exportExcelBtn">导出Excel</button>
+      <button id="printBtn">打印</button>
+    </div>
+    <div id="weekDateDesc" style="font-size:14px;color:#666;margin-top:4px"></div>
+  </div>
+
+  <div class="main-zoom" id="mainZoom">
+    <div class="section-card">
+      <div class="section-title">打卡记录表</div>
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th class="name-col">学生</th>
+              <th>周一</th><th>周二</th><th>周三</th><th>周四</th>
+              <th>周五</th><th>周六</th><th>周日</th>
+              <th>完成</th>
+              <th>错误知识点</th>
+              <th>错误类别</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody id="studentBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="section-card">
+      <div class="section-title">班级统计</div>
+      <div id="classStatSummary"></div>
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr><th>学生</th><th>完成天数</th><th>错误类别</th><th>错误知识点</th></tr>
+          </thead>
+          <tbody id="statTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="section-card">
+      <div class="section-title">学情图表</div>
+      <div class="chart-grid">
+        <div class="chart-box"><h4>完成天数</h4><canvas id="completeChart"></canvas></div>
+        <div class="chart-box"><h4>错误类别</h4><canvas id="errorTypeChart"></canvas></div>
+        <div class="chart-box"><h4>知识点统计</h4><canvas id="pointChart"></canvas></div>
+      </div>
+    </div>
+
+    <div class="section-card">
+      <div class="section-title">班级错误汇总</div>
+      <div id="errorTags" class="tag-box"></div>
+    </div>
+  </div>
+</div>
+</div>
+
+<div class="modal" id="detailModal">
+  <div class="modal-content">
+    <span class="modal-close" id="closeDetail">&times;</span>
+    <h3>学生详情</h3>
+    <p>姓名：<input type="text" id="detailName"></p>
+    <button id="saveNameBtn" class="success">保存姓名</button>
+    <div style="margin-top:16px">
+      <div>本周打卡：<span id="detailDays"></span></div>
+      <div style="margin-top:8px"><strong>本周错误类别：</strong><div id="detailCurKnow" class="tag-box"></div></div>
+      <div style="margin-top:8px"><strong>本周知识点：</strong><div id="detailCurPoint" class="tag-box"></div></div>
+      <div style="margin-top:8px"><strong>历史错误类别：</strong><div id="detailHisKnow" class="tag-box"></div></div>
+      <div style="margin-top:8px"><strong>历史知识点：</strong><div id="detailHisPoint" class="tag-box"></div></div>
+      <div style="margin-top:8px"><strong>学习建议：</strong><span id="detailSuggest"></span></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const TEACHERS = {
+  teacher01:"123456",teacher02:"123456",teacher03:"123456",teacher04:"123456",teacher05:"123456",
+  teacher06:"123456",teacher07:"123456",teacher08:"123456",teacher09:"123456",teacher10:"123456"
+};
+const STORAGE_KEY = "english_class_data_v7_final_fix";
+const KNOW_LIST = ["时态运用","介词搭配","词汇拼读","句型运用","阅读理解","语法结构"];
+
+let currentUser = null;
+let curDetailIndex = null;
+let completeChart, errorChart, pointChart;
+let currentZoom = 1.0;
+let isLandscape = false;
+
+// ====================== 数据读写（彻底隔离） ======================
+function getData() {
+  try {
+    const all = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
+    if (!currentUser) return { currentClass: "", classes: {} };
+    return all[currentUser] || { currentClass: "", classes: {} };
+  } catch (e) {
+    return { currentClass: "", classes: {} };
+  }
+}
+function saveData(teacherData) {
+  const all = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
+  all[currentUser] = teacherData;
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(all));
+}
+function tip(msg) {
+  const t = document.createElement("div");
+  t.className="tip"; t.textContent=msg; document.body.appendChild(t);
+  setTimeout(()=>t.remove(), 1800);
+}
+
+// ====================== 登录 ======================
+function autoLogin() {
+  const u = localStorage.getItem("currentUser");
+  if (u && TEACHERS[u]) { currentUser = u; showMain(); }
+}
+function showMain() {
+  document.getElementById("loginPage").style.display = "none";
+  document.getElementById("mainPage").style.display = "block";
+  document.getElementById("currentTeacherName").textContent = currentUser;
+  init();
+}
+document.getElementById("loginBtn").onclick = () => {
+  const u = document.getElementById("loginUser").value.trim();
+  const p = document.getElementById("loginPwd").value.trim();
+  if (TEACHERS[u] && TEACHERS[u] === p) {
+    currentUser = u; localStorage.setItem("currentUser", u);
+    tip("登录成功"); showMain();
+  } else alert("账号或密码错误");
+};
+document.getElementById("logoutBtn").onclick = () => {
+  if(!confirm("确定退出？")) return;
+  currentUser = null; localStorage.removeItem("currentUser"); location.reload();
+};
+
+// ====================== 周日期 ======================
+function fmtDate(d){ return (d.getMonth()+1)+"月"+d.getDate()+"日"; }
+function getWeekRange(year, week){
+  const first = new Date(year,0,1); const day = first.getDay()||7;
+  const mon = new Date(first); mon.setDate(1 + (day<=1?1-day:8-day));
+  const s = new Date(mon.getTime() + (week-1)*7*86400000);
+  const e = new Date(s); e.setDate(s.getDate()+6);
+  return fmtDate(s)+"~"+fmtDate(e);
+}
+function getCurWeek(){
+  const now = new Date(); const y = now.getFullYear();
+  const first = new Date(y,0,1); const day = first.getDay()||7;
+  const mon = new Date(first); mon.setDate(1 + (day<=1?1-day:8-day));
+  const diff = Math.floor((now-mon)/86400000);
+  return {y, w:Math.floor(diff/7)+1};
+}
+function buildWeekSel(){
+  const sel = document.getElementById("weekSelect"); sel.innerHTML = "";
+  const y = +document.getElementById("yearSelect").value;
+  for(let w=1;w<=52;w++){
+    const opt = document.createElement("option");
+    opt.value=w; opt.textContent=`第${w}周(${getWeekRange(y,w)})`;
+    sel.appendChild(opt);
+  }
+  const cw = getCurWeek(); if(cw.y===y) sel.value = cw.w;
+  updateWeekDesc();
+}
+function updateWeekDesc(){
+  const y = +document.getElementById("yearSelect").value;
+  const w = +document.getElementById("weekSelect").value;
+  document.getElementById("weekDateDesc").textContent = `当前周：${getWeekRange(y,w)}`;
+}
+function weekKey(){
+  const y = document.getElementById("yearSelect").value;
+  const w = String(document.getElementById("weekSelect").value).padStart(2,"0");
+  return y+"W"+w;
+}
+
+// ====================== 班级：真正独立（修复切换班级不刷新） ======================
+function refreshClass(){
+  const d = getData();
+  const sel = document.getElementById("classSelect"); sel.innerHTML = "";
+  Object.keys(d.classes).forEach(name => {
+    const o = document.createElement("option"); o.value=name; o.textContent=name;
+    sel.appendChild(o);
+  });
+  sel.value = d.currentClass || "";
+  // 绑定切换班级事件，切换就加载新班级
+  sel.onchange = () => {
+    const d = getData();
+    d.currentClass = sel.value;
+    saveData(d);
+    loadClass();
+  };
+  loadClass();
+}
+document.getElementById("addClassBtn").onclick = () => {
+  const name = document.getElementById("newClassName").value.trim();
+  if(!name) return alert("请输入班级名");
+  const d = getData();
+  if(d.classes[name]) return alert("班级已存在");
+  // 新建班级：完全空，无任何学生
+  d.classes[name] = { students:[], weeks:{} };
+  d.currentClass = name;
+  saveData(d); refreshClass();
+  tip("新建空班级成功");
+};
+document.getElementById("delClassBtn").onclick = () => {
+  if(!confirm("删除不可恢复，确定？")) return;
+  const d = getData(); const c = d.currentClass;
+  if(!c) return;
+  delete d.classes[c];
+  const keys = Object.keys(d.classes);
+  d.currentClass = keys[0] || "";
+  saveData(d); refreshClass();
+};
+
+// ====================== 加载当前班级（彻底隔离） ======================
+function loadClass(){
+  const d = getData();
+  const c = d.currentClass;
+  const wk = weekKey();
+  if(!c || !d.classes[c]){
+    document.getElementById("studentBody").innerHTML = "";
+    refreshStat();
+    return;
+  }
+  const cls = d.classes[c];
+  // 本周不存在 → 从本班学生创建，绝不共享
+  if(!cls.weeks[wk]){
+    cls.weeks[wk] = cls.students.map(s => ({
+      name: s.name, days:[0,0,0,0,0,0,0], curKnow:[], curPoint:[]
+    }));
+    saveData(d);
+  }
+  renderList(cls.weeks[wk]);
+  refreshStat();
+}
+
+// ====================== 表格渲染 ======================
+function renderList(list){
+  const b = document.getElementById("studentBody"); b.innerHTML = "";
+  list.forEach((s,i)=>{
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td class="name-col" onclick="openDetail(${i})">${s.name}</td>
+      ${[0,1,2,3,4,5,6].map(t=>`<td onclick="toggleDay(${i},${t})">${s.days[t]?"✅":"❌"}</td>`).join("")}
+      <td>${s.days.filter(Boolean).length}/7</td>
+      <td><input style="width:100%" value="${(s.curPoint||[]).join("，")}" onchange="setPoint(${i},this.value)"></td>
+      <td>${KNOW_LIST.map(k=>`<span class="know-tag ${(s.curKnow||[]).includes(k)?'active':''}" onclick="toggleKnow(${i},'${k}')">${k}</span>`).join("")}</td>
+      <td><button class="danger" onclick="delStudent(${i})">删</button></td>
+    `;
+    b.appendChild(tr);
+  });
+}
+
+// ====================== 打卡操作 ======================
+function toggleDay(i,t){
+  const d = getData(); const c = d.currentClass; const wk = weekKey();
+  const s = d.classes[c].weeks[wk][i];
+  s.days[t] = !s.days[t];
+  saveData(d); loadClass();
+}
+function toggleKnow(i,k){
+  const d = getData(); const c = d.currentClass; const wk = weekKey();
+  const s = d.classes[c].weeks[wk][i];
+  const arr = s.curKnow || [];
+  const idx = arr.indexOf(k);
+  idx === -1 ? arr.push(k) : arr.splice(idx,1);
+  s.curKnow = arr;
+  saveData(d); loadClass();
+}
+function setPoint(i,v){
+  const d = getData(); const c = d.currentClass; const wk = weekKey();
+  const s = d.classes[c].weeks[wk][i];
+  s.curPoint = v.split(/[，,、\s]/).filter(x=>x);
+  saveData(d); loadClass();
+}
+
+// ====================== 添加/删除学生：只作用于本班 ======================
+document.getElementById("addStudentBtn").onclick = () => {
+  const d = getData();
+  const c = d.currentClass;
+  if(!c) return alert("请先选择班级");
+
+  const cls = d.classes[c];
+  // 只添加到本班学生列表
+  cls.students.push({ name:"新学生", hisKnow:[], hisPoint:[] });
+
+  // 只给本班所有周追加空记录
+  Object.values(cls.weeks).forEach(w => {
+    w.push({ name:"新学生", days:[0,0,0,0,0,0,0], curKnow:[], curPoint:[] });
+  });
+
+  saveData(d);
+  loadClass();
+};
+
+function delStudent(i){
+  if(!confirm("删除该学生所有记录？")) return;
+  const d = getData();
+  const c = d.currentClass;
+  if(!c) return;
+
+  const cls = d.classes[c];
+  cls.students.splice(i, 1);
+  Object.values(cls.weeks).forEach(w => w.splice(i, 1));
+
+  saveData(d);
+  loadClass();
+  tip("已删除");
+}
+
+// ====================== 详情 ======================
+function openDetail(i){
+  curDetailIndex = i;
+  const d = getData(); const c = d.currentClass; const wk = weekKey();
+  const sWeek = d.classes[c].weeks[wk][i];
+  const sInfo = d.classes[c].students[i];
+
+  document.getElementById("detailName").value = sInfo.name;
+  document.getElementById("detailDays").textContent = sWeek.days.filter(Boolean).length+"/7";
+
+  function rt(elId, arr, cls){
+    const b=document.getElementById(elId); b.innerHTML="";
+    (arr||[]).forEach(t=>{const s=document.createElement("span");s.className=cls;s.textContent=t;b.appendChild(s);});
+  }
+  rt("detailCurKnow", sWeek.curKnow||[], "tag-current");
+  rt("detailCurPoint", sWeek.curPoint||[], "tag-current");
+  rt("detailHisKnow", sInfo.hisKnow||[], "tag-history");
+  rt("detailHisPoint", sInfo.hisPoint||[], "tag-history");
+
+  const all = [...new Set([...(sWeek.curKnow||[]),...(sInfo.hisKnow||[])])];
+  let sug="表现优秀";
+  if(all.includes("阅读理解"))sug="加强精读训练";
+  else if(all.includes("语法结构"))sug="巩固语法句型";
+  else if(all.includes("介词搭配"))sug="强化介词用法";
+  else if(all.includes("时态运用"))sug="系统梳理时态";
+  else if(all.includes("词汇拼读"))sug="加强音标拼读";
+  else if(all.includes("句型运用"))sug="多仿写多造句";
+  document.getElementById("detailSuggest").textContent = sug;
+  document.getElementById("detailModal").style.display = "flex";
+}
+document.getElementById("closeDetail").onclick = ()=>{ document.getElementById("detailModal").style.display="none"; };
+document.getElementById("saveNameBtn").onclick = ()=>{
+  const name = document.getElementById("detailName").value.trim();
+  if(!name)return alert("请输入姓名");
+  const d=getData();const c=d.currentClass;const wk=weekKey();const cls=d.classes[c];
+  const stu=cls.students[curDetailIndex];
+  stu.name=name;
+  const wd=cls.weeks[wk][curDetailIndex];
+  stu.hisKnow=[...new Set([...stu.hisKnow,...wd.curKnow])];
+  stu.hisPoint=[...new Set([...stu.hisPoint,...wd.curPoint])];
+  Object.values(cls.weeks).forEach(w=>{if(w[curDetailIndex])w[curDetailIndex].name=name;});
+  saveData(d);
+  document.getElementById("detailModal").style.display="none";
+  loadClass();tip("保存成功");
+};
+
+// ====================== 统计 & 图表（修复手机端渲染） ======================
+function refreshStat(){
+  const d=getData();const c=d.currentClass;const wk=weekKey();
+  if(!c||!d.classes[c]||!d.classes[c].weeks||!d.classes[c].weeks[wk]){
+    document.getElementById("statTableBody").innerHTML="";
+    document.getElementById("classStatSummary").innerHTML="";
+    document.getElementById("errorTags").innerHTML="";
+    clearCharts();return;
+  }
+  const list=d.classes[c].weeks[wk];
+  renderStatTable(list);
+  renderCharts(list);
+  renderErrorTags(list);
+}
+function renderStatTable(list){
+  const b=document.getElementById("statTableBody");b.innerHTML="";
+  let total=0;
+  list.forEach(s=>{
+    const n=s.days.filter(Boolean).length;total+=n;
+    const tr=document.createElement("tr");
+    tr.innerHTML=`<td class="name-col">${s.name}</td><td>${n}/7</td><td>${s.curKnow?.join("，")||"-"}</td><td>${s.curPoint?.join("，")||"-"}</td>`;
+    b.appendChild(tr);
+  });
+  const avg=list.length?((total/(list.length*7))*100).toFixed(1):0;
+  document.getElementById("classStatSummary").textContent=`总完成率：${avg}%  总打卡：${total}/${list.length*7}`;
+}
+function renderCharts(list){
+  clearCharts();
+  const names=list.map(s=>s.name);
+  const days=list.map(s=>s.days.filter(Boolean).length);
+  const ctx1=document.getElementById("completeChart").getContext("2d");
+  completeChart=new Chart(ctx1,{
+    type:"bar",data:{labels:names,datasets:[{data:days,backgroundColor:"#165DFF"}]},
+    options:{
+      responsive:true,
+      maintainAspectRatio:false,
+      scales:{y:{beginAtZero:true,max:7}}
+    }
+  });
+  const kc={};KNOW_LIST.forEach(k=>kc[k]=0);
+  list.forEach(s=>{s.curKnow?.forEach(k=>kc[k]++)});
+  const ctx2=document.getElementById("errorTypeChart").getContext("2d");
+  errorChart=new Chart(ctx2,{
+    type:"pie",data:{labels:Object.keys(kc),datasets:[{
+      data:Object.values(kc),
+      backgroundColor:["#165DFF","#09c971","#ff4757","#ffa502","#9966ff","#17c0eb"]
+    }]},
+    options:{responsive:true,maintainAspectRatio:false}
+  });
+  const pc={};
+  list.forEach(s=>{s.curPoint?.forEach(p=>pc[p]=(pc[p]||0)+1);});
+  const ctx3=document.getElementById("pointChart").getContext("2d");
+  pointChart=new Chart(ctx3,{
+    type:"bar",data:{labels:Object.keys(pc),datasets:[{data:Object.values(pc),backgroundColor:"#09c971"}]},
+    options:{responsive:true,maintainAspectRatio:false,scales:{y:{beginAtZero:true}}}
+  });
+}
+function clearCharts(){
+  if(completeChart)completeChart.destroy();
+  if(errorChart)errorChart.destroy();
+  if(pointChart)pointChart.destroy();
+}
+function renderErrorTags(list){
+  const map={};list.forEach(s=>{s.curKnow?.forEach(k=>map[k]=(map[k]||0)+1);});
+  const box=document.getElementById("errorTags");box.innerHTML="";
+  Object.entries(map).forEach(([k,c])=>{
+    const t=document.createElement("span");t.className="tag-current";t.textContent=`${k}(${c})`;box.appendChild(t);
+  });
+}
+
+// ====================== 导入导出 ======================
+document.getElementById("exportBtn").onclick=()=>{
+  const dt=localStorage.getItem(STORAGE_KEY);if(!dt)return alert("无数据");
+  const blob=new Blob([dt],{type:"application/json"});
+  const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="打卡备份.json";a.click();URL.revokeObjectURL(a.href);
+};
+document.getElementById("importBtn").onclick=()=>{document.getElementById("fileImport").click();};
+document.getElementById("fileImport").onchange=(e)=>{
+  const f=e.target.files[0];if(!f)return;
+  const r=new FileReader();r.onload=()=>{
+    try{const j=r.result;JSON.parse(j);localStorage.setItem(STORAGE_KEY,j);tip("导入成功");setTimeout(()=>location.reload(),1000);}catch(e){alert("格式错误");}
+  };r.readAsText(f);
+};
+document.getElementById("exportStuTemplateBtn").onclick=()=>{
+  const ws=XLSX.utils.aoa_to_sheet([["学生姓名"]]);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"模板");XLSX.writeFile(wb,"学员模板.xlsx");
+};
+document.getElementById("importStuBtn").onclick=()=>{document.getElementById("studentImport").click();};
+document.getElementById("studentImport").onchange=(e)=>{
+  const f=e.target.files[0];if(!f)return;
+  const d=getData();const c=d.currentClass;if(!c)return alert("请先选班级");
+  const r=new FileReader();r.onload=(ev)=>{
+    try{
+      const wb=XLSX.read(ev.target.result,{type:"binary"});
+      const arr=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:["name"]});arr.shift();
+      const names=arr.map(i=>i.name).filter(n=>n&&n.trim());if(!names.length)return alert("未读取到姓名");
+      const cls=d.classes[c];
+      names.forEach(name=>{
+        cls.students.push({name:name.trim(),hisKnow:[],hisPoint:[]});
+        Object.values(cls.weeks).forEach(w=>{w.push({name:name.trim(),days:[0,0,0,0,0,0,0],curKnow:[],curPoint:[]});});
+      });
+      saveData(d);loadClass();tip(`导入${names.length}人`);
+    }catch(e){alert("导入失败");}
+  };r.readAsBinaryString(f);
+};
+document.getElementById("exportExcelBtn").onclick=()=>{
+  const d=getData();const c=d.currentClass;const wk=weekKey();
+  if(!c||!d.classes[c]||!d.classes[c].weeks||!d.classes[c].weeks[wk])return alert("无数据");
+  const list=d.classes[c].weeks[wk];
+  const data=[["姓名","周一","二","三","四","五","六","日","完成","错误类别","知识点"]];
+  list.forEach(s=>{
+    data.push([
+      s.name,s.days[0]?"√":"×",s.days[1]?"√":"×",s.days[2]?"√":"×",s.days[3]?"√":"×",
+      s.days[4]?"√":"×",s.days[5]?"√":"×",s.days[6]?"√":"×",
+      s.days.filter(Boolean).length+"/7",s.curKnow?.join("，")||"",s.curPoint?.join("，")||""
+    ]);
+  });
+  const ws=XLSX.utils.aoa_to_sheet(data);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"打卡");XLSX.writeFile(wb,`${c}打卡表.xlsx`);
+};
+document.getElementById("printBtn").onclick=()=>{window.print();};
+
+// ====================== 缩放 ======================
+function changeZoom(delta){
+  currentZoom+=delta;if(currentZoom<0.5)currentZoom=0.5;if(currentZoom>10)currentZoom=10;
+  document.getElementById("mainZoom").style.transform=`scale(${currentZoom})`;
+  document.getElementById("zoomText").textContent=Math.round(currentZoom*100)+"%";
+}
+document.getElementById("toggleScreenBtn").onclick=()=>{
+  isLandscape=!isLandscape;
+  if(isLandscape){
+    document.body.style.transform="rotate(90deg)";document.body.style.width="100vh";document.body.style.height="100vw";
+    document.body.style.position="absolute";document.body.style.top="100%";document.body.style.left="0";document.body.style.transformOrigin="left top";
+  }else{
+    document.body.style.transform="";document.body.style.width="";document.body.style.height="";
+    document.body.style.position="";document.body.style.top="";document.body.style.left="";document.body.style.transformOrigin="";
+  }
+};
+
+// ====================== 初始化 ======================
+function init(){
+  buildWeekSel();
+  refreshClass();
+  document.getElementById("yearSelect").onchange=()=>{buildWeekSel();loadClass();};
+  document.getElementById("weekSelect").onchange=()=>{updateWeekDesc();loadClass();};
+}
+window.onload=()=>{autoLogin();};
+</script>
+</body>
+</html>
