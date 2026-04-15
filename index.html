@@ -445,30 +445,14 @@ function openDetail(i){
   rt("detailHisKnow", sInfo.hisKnow||[], "tag-history");
   rt("detailHisPoint", sInfo.hisPoint||[], "tag-history");
 
-  const all = [...new Set([...(s.curKnow || []), ...(g.hisKnow || [])])];
-
-// 详细的建议映射（含具体方法和鼓励语）
-const adviceMap = {
-  "阅读理解": "📖 加强精读训练：每天阅读一篇150-200字的短文，完成后回答3-5个理解题，并尝试用一句话概括故事大意。推荐《小学生每日阅读》练习册，逐步提升信息提取和推理能力。",
-  "语法结构": "✍️ 巩固语法句型：通过趣味语法游戏（如句子拼图、改错小医生）掌握句子成分。建议每周完成两个语法专项练习，重点练习主谓一致和基础句型结构。",
-  "介词搭配": "📍 强化介词用法：制作介词卡片（in/on/at/under等），结合图片描述物品位置，或玩“找一找”游戏。每天口头造句5个，例如“The book is on the desk.”。",
-  "时态运用": "⏰ 系统梳理时态：绘制时态时间轴，用不同颜色标注一般现在时、一般过去时、一般将来时。每天用不同时态各写一个句子，并完成10个时态填空练习。",
-  "词汇拼读": "🔊 加强音标拼读：学习自然拼读法，通过分解音节和拼读闯关游戏掌握发音规律。推荐使用拼读APP，每天拼读10个新单词，并录制自己的发音进行比对。",
-  "句型运用": "📝 多仿写多造句：模仿课本中的经典句型，进行替换词练习。每周写3篇小日记，每篇至少使用5个所学句型，逐步提升句子表达能力。"
-};
-
-// 筛选出实际存在的薄弱项
-const existingWeaknesses = all.filter(item => adviceMap.hasOwnProperty(item));
-
-let sug;
-if (existingWeaknesses.length === 0) {
-  // 没有薄弱项：给出鼓励 + 拓展建议
-  sug = "🎉 表现优秀！你的作业完成得非常好，继续保持良好的学习习惯。建议每天坚持阅读10分钟，尝试挑战更有难度的题目，争取更棒的表现！";
-} else {
-  // 生成针对性建议列表（每个弱点一条详细建议）
-  const adviceList = existingWeaknesses.map(weak => `【${weak}】${adviceMap[weak]}`).join("\n");
-  sug = `📚 作业反馈：发现你在 ${existingWeaknesses.join("、")} 方面有提升空间。别担心，针对性练习会让你快速进步！以下是详细建议：\n${adviceList}\n✨ 坚持练习，你一定可以攻克这些难点！老师为你加油！`;
-}
+  const all = [...new Set([...(sWeek.curKnow||[]),...(sInfo.hisKnow||[])])];
+  let sug="表现优秀";
+  if(all.includes("阅读理解"))sug="加强精读训练";
+  else if(all.includes("语法结构"))sug="巩固语法句型";
+  else if(all.includes("介词搭配"))sug="强化介词用法";
+  else if(all.includes("时态运用"))sug="系统梳理时态";
+  else if(all.includes("词汇拼读"))sug="加强音标拼读";
+  else if(all.includes("句型运用"))sug="多仿写多造句";
   document.getElementById("detailSuggest").textContent = sug;
   document.getElementById("detailModal").style.display = "flex";
 }
