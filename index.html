@@ -447,12 +447,12 @@ function openDetail(i){
 
   const all = [...new Set([...(sWeek.curKnow||[]),...(sInfo.hisKnow||[])])];
   let sug="表现优秀";
-  if(all.includes("阅读理解"))sug="加强精读训练";
-  else if(all.includes("语法结构"))sug="巩固语法句型";
-  else if(all.includes("介词搭配"))sug="强化介词用法";
-  else if(all.includes("时态运用"))sug="系统梳理时态";
-  else if(all.includes("词汇拼读"))sug="加强音标拼读";
-  else if(all.includes("句型运用"))sug="多仿写多造句";
+  if(all.includes("阅读理解"))sug="📖 加强精读训练：每天阅读一篇短文（150-200字），完成3-5个理解题，并尝试用一句话概括主要内容。推荐《小学生每日阅读》练习册，逐步提升信息提取和推理能力。";
+  else if(all.includes("语法结构"))sug="✍️ 巩固语法句型：通过趣味语法游戏（如句子拼图、改错小医生）掌握句子成分。建议每周完成两个语法专项练习，重点练习主谓一致和基础句型结构。";
+  else if(all.includes("介词搭配"))sug="📍 强化介词用法：制作介词卡片（in/on/at/under等），结合图片进行描述练习。例如描述房间物品位置，或玩“找一找”游戏，每天口头造句5个。";
+  else if(all.includes("时态运用"))sug="⏰ 系统梳理时态：绘制时态时间轴，用不同颜色标注一般现在时、一般过去时、一般将来时等。每天用不同时态各写一个句子，完成10个填空练习。";
+  else if(all.includes("词汇拼读"))sug="🔊 加强音标拼读：学习自然拼读法，通过分解音节和拼读游戏（如拼读闯关）掌握发音规律。推荐使用拼读APP，每天拼读10个新单词，并录制自己的发音。";
+  else if(all.includes("句型运用"))sug="📝 多仿写多造句：模仿课本中的经典句型，进行替换词练习。每周写3篇小日记，每篇至少使用5个所学句型，逐步提升句子表达能力。";
   document.getElementById("detailSuggest").textContent = sug;
   document.getElementById("detailModal").style.display = "flex";
 }
